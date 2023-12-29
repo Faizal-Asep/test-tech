@@ -8,11 +8,11 @@
 
 ### Start App
 
-```sh
+'''sh
 docker compose -f "docker-compose.yml" up -d --build
-```
+'''
 
 ### Running App
-```
+'''
 open **[localhost:8080/](http://localhost:8080/)** 
-```
+'''
