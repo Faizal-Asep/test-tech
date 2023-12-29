@@ -1,0 +1,267 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"> <!-- load bulma css -->
+    
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> <!-- load fontawesome -->
+    <style>
+      body        { padding-top:70px; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="jumbotron text-center text-success">
+        <h1> Output</h1>
+      </div>
+      <div class="alert alert-success" style="display: none;" role="alert"></div>
+      <div class="alert alert-warning" style="display: none;" role="alert"></div>
+      <div class="alert alert-danger" style="display: none;" role="alert"></div>
+      <div class="alert alert-dark" style="display: none;" role="alert"></div>
+      <div class="row">
+        <div class="col-sm">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Ganjil</h5>
+              <table class="table" id="table-ganjil">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">No Handphone</th>
+                    <th scope="col">Provider</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range $val := .ganjil}}
+                  <tr id="rec{{$val.ID}}">
+                    <td><input type="radio" name="record" value="{{$val.ID}}"> {{$val.ID}}</td>
+                    <td>{{$val.Number}}</td>
+                    <td>{{$val.Provider}}</td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Genap</h5>
+              <table class="table" id="table-genap">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">No Handphone</th>
+                    <th scope="col">Provider</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range $val := .genap}}
+                  <tr id="rec{{$val.ID}}">
+                    <td><input type="radio" name="record" value="{{$val.ID}}"> {{$val.ID}}</td>
+                    <td>{{$val.Number}}</td>
+                    <td>{{$val.Provider}}</td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row  mt-5">
+        <div class="col-sm">
+          <button type="button" class="btn btn-success" id="play">nyalakan notifikasi</button>
+        </div>
+        <div class="col-sm">
+          <button type="button" class="btn btn-primary" id="btn-edit">Edit</button>
+          <button type="button" class="btn btn-secondary" id="btn-delete">Delete</button>
+          <a href="/input" type="button" class="btn btn-primary pull-right">Input Page</a>
+        </div>
+      </div>
+    </div>
+
+    <div id="myModal" class="modal fade" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLongTitle">Edit Data</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <form id="form">
+          <div class="modal-body">
+            
+              <input type="hidden" name="id">
+              <div class="form-group">
+                <label>No Handphone</label>
+                <input type="number" class="form-control" name="phonenumber" placeholder="088***">
+              </div>
+              <div class="form-group">
+                <label>Provider</label>
+                <select class="form-control" name="provider">
+                  <option></option>
+                  <option>Smartfren</option>
+                  <option>XL</option>
+                  <option>Telkomsel</option>
+                  <option>Indosat</option>
+                </select>
+              </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>  
+      var ws;
+      function convertFormToJSON(form) {
+        const array = $(form).serializeArray(); // Encodes the set of form elements as an array of names and values.
+        const json = {};
+        $.each(array, function () {
+          json[this.name] = this.value || "";
+        });
+        return json;
+      }
+      $( document ).ready(function(evt) {   
+      
+        var audioElement = document.createElement('audio');
+        audioElement.setAttribute('src', 'http://localhost:8080/assets/mixkit-achievement-bell-600.wav');
+        $('#play').click(function() {
+            audioElement.play();
+            $(this).hide();
+        }); 
+        if (ws) {
+          return false;
+        }
+        ws = new WebSocket("ws://localhost:8080/echo");
+        ws.onopen = function(evt) {
+          $(".alert-dark").html("websocket connected ").show().fadeOut(2000);
+        }
+        ws.onclose = function(evt) {
+          $(".alert-dark").html("websocket has closed, please reload the page ").show();
+          location.reload();
+          ws = null;
+        }
+        ws.onmessage = function(evt) {
+          audioElement.play();
+          var newJ= $.parseJSON(evt.data);
+          if (newJ.command==="delete"){
+            $('#rec'+newJ.data).remove();
+          }else if(newJ.command==="save"){
+            if (newJ.data.phonenumber %2 == 0){
+              if($('#rec'+newJ.data.id).length==0 )   {
+                $("#table-genap > tbody").append('<tr id="rec'+newJ.data.id+'"><td><input type="radio" name="record" value="'+newJ.data.id+'"> '+newJ.data.id+'</td><td>'+newJ.data.phonenumber+'</td><td>'+newJ.data.provider+'</td></tr>');
+              }
+            }else{
+              if($('#rec'+newJ.data.id).length==0 )   {
+                $("#table-ganjil > tbody").append('<tr id="rec'+newJ.data.id+'"><td><input type="radio" name="record" value="'+newJ.data.id+'"> '+newJ.data.id+'</td><td>'+newJ.data.phonenumber+'</td><td>'+newJ.data.provider+'</td></tr>');
+              }
+            }
+          }else if(newJ.command==="update"){
+            if (newJ.data.phonenumber %2 == 0){
+              if($("#table-ganjil #rec"+newJ.data.id).length==0){
+                $('#rec'+newJ.data.id).html('<td><input type="radio" name="record" value="'+newJ.data.id+'"> '+newJ.data.id+'</td><td>'+newJ.data.phonenumber+'</td><td>'+newJ.data.provider+'</td>')
+              }else{
+                $('#rec'+newJ.data.id).remove();
+                $("#table-genap > tbody").append('<tr id="rec'+newJ.data.id+'"><td><input type="radio" name="record" value="'+newJ.data.id+'"> '+newJ.data.id+'</td><td>'+newJ.data.phonenumber+'</td><td>'+newJ.data.provider+'</td></tr>');
+              }
+            }else{
+              if($("#table-genap #rec"+newJ.data.id).length==0){
+                $('#rec'+newJ.data.id).html('<td><input type="radio" name="record" value="'+newJ.data.id+'"> '+newJ.data.id+'</td><td>'+newJ.data.phonenumber+'</td><td>'+newJ.data.provider+'</td>')
+              }else{
+                $('#rec'+newJ.data.id).remove();
+                $("#table-ganjil > tbody").append('<tr id="rec'+newJ.data.id+'"><td><input type="radio" name="record" value="'+newJ.data.id+'"> '+newJ.data.id+'</td><td>'+newJ.data.phonenumber+'</td><td>'+newJ.data.provider+'</td></tr>');
+              }
+            }
+
+              //
+          }
+        }
+        ws.onerror = function(evt) {
+          alert(evt.data);
+        }
+        $("#btn-delete").on("click",function(event){
+          var selected = $( "input[name=record]:checked" );
+          if (selected.length > 0) {
+            console.log();
+            $.ajax({
+              url: '/api/handphone/'+$( "input[name=record]:checked" ).val(), // url where to submit the request
+              type : "DELETE", // type of action POST || GET
+              dataType : 'json', // data type
+              error: function(xhr, resp, text) {
+                var newJ= $.parseJSON(xhr.responseText);
+                $(".alert-danger").html(newJ.message).show().fadeOut(2000);
+              }
+            })
+          }else{
+            alert("Pilih data terlebih dahulu");
+          }
+        });
+        $("#btn-edit").on("click",function(event){
+          var selected = $( "input[name=record]:checked" );
+          if (selected.length > 0) {
+            console.log();
+            $.ajax({
+              url: '/api/handphone/'+$( "input[name=record]:checked" ).val(), // url where to submit the request
+              type : "GET", 
+              dataType : 'json', 
+              success : function(result) {
+                $( "input[name=id]" ).val(result.id);
+                $( "input[name=phonenumber]" ).val(result.phonenumber);
+                $( "select[name=provider]" ).val(result.provider);
+                $('#myModal').modal('show');
+              },
+              error: function(xhr, resp, text) {
+                var newJ= $.parseJSON(xhr.responseText);
+                $(".alert-danger").html(newJ.message).show().fadeOut(2000);
+              }
+            })
+          }else{
+            alert("Pilih data terlebih dahulu");
+            event.preventDefault();
+          }
+        }); 
+        $("#form").on( "submit", function( event ) {
+          event.preventDefault();
+
+          if ( ($( "input[name=phonenumber]" ).val() === "" )||($( "select[name=provider]" ).val() === "")) {
+              $( ".alert-warning" ).html("No Handphone dan provider tidak boleh kosong!").show().fadeOut(2000);
+              return;
+          }
+
+          let handphoneData = {
+            phonenumber: $( "input[name=phonenumber]" ).val(),
+            provider: $( "select[name=provider]" ).val(),
+          };
+
+          let jsonStr = JSON.stringify(handphoneData);
+          $.ajax({
+            url: '/api/handphone/'+$( "input[name=id]" ).val(), // url where to submit the request
+            type : "PUT", // type of action POST || GET
+            dataType : 'json', // data type
+            data : jsonStr, // post data || get data
+            success : function(result) {
+              $(".alert-success").html("saved").show().fadeOut(2000);
+              $('#myModal').modal('hide');
+            },
+            error: function(xhr, resp, text) {
+              var newJ= $.parseJSON(xhr.responseText);
+              $(".alert-danger").html(newJ.message).show().fadeOut(2000);
+            }
+          })
+      });
+      });
+    </script>
+    <!-- Modal -->
+
+  </body>
+</html> 
